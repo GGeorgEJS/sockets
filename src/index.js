@@ -33,6 +33,9 @@ class Entity {
             self.x += self.spdX;
             self.y += self.spdY;
         }
+        self.getDistance = (pt) => {
+            return Math.sqrt(Math.pow(self.x - pt.x, 2) + Math.pow(self.y - pt.y, 2));
+        }
         return self;
     }
 }
@@ -61,8 +64,7 @@ class Player {
         }
 
         self.shootBullet = (angle) => {
-            console.log(angle);
-            const b = new Bullet(angle);
+            const b = new Bullet(self.id, angle);
             b.x = self.x;
             b.y = self.y
         }
@@ -102,7 +104,6 @@ Player.onConnect = (socket) => {
         } else if (data.inputId === "down") {
             player.pressingDown = data.state;
         } else if (data.inputId === "attack") {
-            console.log(data.inputId)
             player.pressingAttack = data.state;
         } else if (data.inputId === "mouseAngle") {
             player.mouseAngle = data.state;
@@ -129,12 +130,12 @@ Player.update = () => {
 }
 
 class Bullet {
-    constructor(angle) {
+    constructor(parent, angle) {
         const self = new Entity();
         self.id = Math.random();
         self.spdX = Math.cos(angle / 180 * Math.PI) * 10;
         self.spdY = Math.sin(angle / 180 * Math.PI) * 10;
-
+        self.parent = parent;
         self.timer = 0;
         self.toRemove = false;
         const super_update = self.update;
@@ -143,6 +144,13 @@ class Bullet {
                 self.toRemove = true
             }
             super_update();
+
+            for (let i in Player.list) {
+                const player = Player.list[i];
+                if (self.getDistance(player) < 32 && self.parent !== player.id) {
+                    self.toRemove = true;
+                }
+            }
         }
         Bullet.list[self.id] = self;
         return self;
@@ -157,10 +165,15 @@ Bullet.update = () => {
     for (let i in Bullet.list) {
         const bullet = Bullet.list[i];
         bullet.update();
-        pack.push({
-            x: bullet.x,
-            y: bullet.y
-        })
+        if (bullet.toRemove) {
+            delete Bullet.list[i];
+        } else {
+            pack.push({
+                x: bullet.x,
+                y: bullet.y
+            })
+        }
+
     }
     return pack;
 }
