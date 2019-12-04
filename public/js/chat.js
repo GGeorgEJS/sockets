@@ -14,7 +14,7 @@ socket.on('newPosition', (data) => {
     }
 })
 
-document.onkeydown = (e) => {
+document.addEventListener("keydown", (e) => {
     if (e.keyCode === 68)
         socket.emit('keyPress', {
             inputId: 'right',
@@ -36,9 +36,9 @@ document.onkeydown = (e) => {
             state: true
         })
 
-}
+});
 
-document.onkeyup = (e) => {
+document.addEventListener("keyup", (e) => {
     if (e.keyCode === 68)
         socket.emit('keyPress', {
             inputId: 'right',
@@ -59,5 +59,32 @@ document.onkeyup = (e) => {
             inputId: 'up',
             state: false
         })
+});
 
-}
+
+document.addEventListener("mousedown", (e) => {
+    socket.emit('keyPress', {
+        inputId: 'attack',
+        state: true
+    })
+})
+
+document.addEventListener("mouseup", (e) => {
+    socket.emit('keyPress', {
+        inputId: 'attack',
+        state: false
+    })
+})
+
+document.addEventListener('mousemove', (e) => {
+    console.log("lol")
+    let x = -250 + e.clientX - 8;
+    let y = -250 + e.clientY - 8;
+    let angle = Math.atan2(y, x) / Math.PI * 180;
+    console.log(angle);
+    socket.emit('keyPress', {
+        inputId: 'mouseAngle',
+        state: angle
+    })
+
+})

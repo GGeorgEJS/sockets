@@ -46,12 +46,25 @@ class Player {
         self.pressingLeft = false;
         self.pressingUp = false;
         self.pressingDown = false;
+        self.pressingAttack = false;
+        self.mouseAngle = 0;
         self.maxSpd = 10;
 
         const super_update = self.update;
         self.update = () => {
             self.updateSpd();
             super_update();
+
+            if (self.pressingAttack) {
+                self.shootBullet(self.mouseAngle);
+            }
+        }
+
+        self.shootBullet = (angle) => {
+            console.log(angle);
+            const b = new Bullet(angle);
+            b.x = self.x;
+            b.y = self.y
         }
 
 
@@ -88,6 +101,11 @@ Player.onConnect = (socket) => {
             player.pressingUp = data.state;
         } else if (data.inputId === "down") {
             player.pressingDown = data.state;
+        } else if (data.inputId === "attack") {
+            console.log(data.inputId)
+            player.pressingAttack = data.state;
+        } else if (data.inputId === "mouseAngle") {
+            player.mouseAngle = data.state;
         }
     })
 }
@@ -133,9 +151,7 @@ class Bullet {
 Bullet.list = {};
 
 Bullet.update = () => {
-    if (Math.random() < 0.1) {
-        new Bullet(Math.random() * 360);
-    }
+
 
     let pack = [];
     for (let i in Bullet.list) {
