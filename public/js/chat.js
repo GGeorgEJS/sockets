@@ -1,14 +1,19 @@
 const socket = io();
 const ctx = document.getElementById("ctx").getContext("2d");
 ctx.font = "30px Arial"
+const WIDTH = 500;
+const HEIGHT = 500;
 
 const Img = {}
 Img.player = new Image();
 Img.player.src = '../img/player.png';
 Img.bullet = new Image();
 Img.bullet.src = '../img/bullet.png'
-Img.map = new Image();
-Img.map.src = '../img/map.png'
+Img.map = {};
+Img.map['field'] = new Image();
+Img.map['field'].src = '../img/map.png'
+Img.map['forest'] = new Image()
+Img.map['forest'].src = '../img/map2.png'
 
 
 class Player {
@@ -21,18 +26,26 @@ class Player {
         self.hp = initPack.hp;
         self.hpMax = initPack.hpMax;
         self.score = initPack.score;
+        self.map = initPack.map;
 
         self.draw = () => {
+            if (Player.list[selfId].map !== self.map) {
+                return;
+            }
+            let x = self.x - Player.list[selfId].x + WIDTH / 2;
+            let y = self.y - Player.list[selfId].y + HEIGHT / 2;
+
             let hpWidth = 30 * self.hp / self.hpMax;
             ctx.fillStyle = "red";
-            ctx.fillRect(self.x - hpWidth / 2, self.y - 40, hpWidth, 4);
+            ctx.fillRect(x - hpWidth / 2, y - 40, hpWidth, 4);
 
             const width = Img.player.width * 2;
             const height = Img.player.width * 2;
 
+
             ctx.drawImage(Img.player,
                 0, 0, Img.player.width, Img.player.height,
-                self.x - width / 2, self.y - height / 2, width, height)
+                x - width / 2, y - height / 2, width, height)
 
             // ctx.fillText(self.score, self.x, self.y - 60);
         }
@@ -51,13 +64,21 @@ class Bullet {
         self.number = initPack.number;
         self.x = initPack.x;
         self.y = initPack.y;
+        self.map = initPack.map;
+
         self.draw = () => {
+            if (Player.list[selfId].map !== self.map) {
+                return;
+            }
             const width = Img.bullet.width / 2;
             const height = Img.bullet.width / 2;
 
+            let x = self.x - Player.list[selfId].x + WIDTH / 2;
+            let y = self.y - Player.list[selfId].y + HEIGHT / 2;
+
             ctx.drawImage(Img.bullet,
                 0, 0, Img.bullet.width, Img.bullet.height,
-                self.x - width / 2, self.y - height / 2, width, height)
+                x - width / 2, y - height / 2, width, height)
         }
         Bullet.list[self.id] = self;
         return self;
@@ -66,7 +87,13 @@ class Bullet {
 
 Bullet.list = {};
 
+
+let selfId = null;
+
 socket.on('init', (data) => {
+    if (data.selfId) {
+        selfId = data.selfId
+    }
 
     for (let i = 0; i < data.player.length; i++) {
         new Player(data.player[i]);
@@ -111,8 +138,11 @@ socket.on('update', (data) => {
     }
 })
 
-socket.on('remove', (data) => {
 
+
+
+
+socket.on('remove', (data) => {
     for (let i = 0; i < data.player.length; i++) {
         delete Player.list[data.player[i]];
     }
@@ -125,8 +155,13 @@ socket.on('remove', (data) => {
 
 
 setInterval(() => {
+    if (!selfId) {
+
+        return;
+    }
     ctx.clearRect(0, 0, 500, 500);
     drawMap();
+    drawScore();
     for (let i in Player.list) {
         Player.list[i].draw()
     }
@@ -136,7 +171,17 @@ setInterval(() => {
 }, 1000 / 25);
 
 const drawMap = () => {
-    ctx.drawImage(Img.map, 0, 0);
+    const player = Player.list[selfId]
+    const x = WIDTH / 2 - player.x;
+    const y = HEIGHT / 2 - player.y;
+
+    ctx.drawImage(Img.map[player.map], x, y);
+}
+
+const drawScore = () => {
+
+    ctx.fillStyle = 'white';
+    ctx.fillText(Player.list[selfId].score, 0, 30)
 }
 
 document.addEventListener("keydown", (e) => {

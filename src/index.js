@@ -15,14 +15,31 @@ app.use(express.static(publicDirectory));
 
 let SOCKET_LIST = {};
 
+
+
 class Entity {
-    constructor() {
+    constructor(param) {
         const self = {
             x: 250,
             y: 250,
             spdX: 0,
             spdY: 0,
-            id: ''
+            id: '',
+            map: 'forest'
+        }
+        if (param) {
+            if (param.x) {
+                self.x = param.x
+            }
+            if (param.y) {
+                self.y = param.y
+            }
+            if (param.map) {
+                self.map = param.map
+            }
+            if (param.id) {
+                self.id = param.id
+            }
         }
 
         self.update = () => {
@@ -41,9 +58,8 @@ class Entity {
 }
 
 class Player {
-    constructor(id) {
-        const self = new Entity();
-        self.id = id;
+    constructor(param) {
+        const self = new Entity(param);
         self.number = "" + Math.floor(Math.random() * 10);
         self.pressingRight = false;
         self.pressingLeft = false;
@@ -67,9 +83,13 @@ class Player {
         }
 
         self.shootBullet = (angle) => {
-            const b = new Bullet(self.id, angle);
-            b.x = self.x;
-            b.y = self.y
+            new Bullet({
+                parent: self.id,
+                angle,
+                x: self.x,
+                y: self.y,
+                map: self.map
+            });
         }
 
 
@@ -99,7 +119,8 @@ class Player {
                 number: self.number,
                 hp: self.hp,
                 hpMax: self.hpMax,
-                score: self.score
+                score: self.score,
+                map: self.map
             }
         }
         self.getUpdatePack = () => {
@@ -113,14 +134,22 @@ class Player {
             }
         }
 
-        Player.list[id] = self;
+        Player.list[self.id] = self;
         initPack.player.push(self.getInitPack());
         return self;
     }
 }
 Player.list = {};
 Player.onConnect = (socket) => {
-    const player = new Player(socket.id);
+    let map = 'forest';
+    if (Math.random() < 0.5) {
+        map = 'field';
+    }
+    const player = new Player({
+        id: socket.id,
+        x: 100,
+        map: map
+    });
     socket.on('keyPress', (data) => {
         if (data.inputId === "left") {
             player.pressingLeft = data.state;
@@ -136,11 +165,8 @@ Player.onConnect = (socket) => {
             player.mouseAngle = data.state;
         }
     })
-    let bullets = [];
-    for (let i in Bullet.list) {
-        bullets.push(Bullet.list[i].getInitPack())
-    }
     socket.emit('init', {
+        selfId: socket.id,
         player: Player.getAllInitPack(),
         bullet: Bullet.getAllInitPack()
     })
@@ -170,12 +196,13 @@ Player.update = () => {
 }
 
 class Bullet {
-    constructor(parent, angle) {
-        const self = new Entity();
+    constructor(param) {
+        const self = new Entity(param);
         self.id = Math.random();
-        self.spdX = Math.cos(angle / 180 * Math.PI) * 10;
-        self.spdY = Math.sin(angle / 180 * Math.PI) * 10;
-        self.parent = parent;
+        self.angle = param.angle;
+        self.spdX = Math.cos(param.angle / 180 * Math.PI) * 10;
+        self.spdY = Math.sin(param.angle / 180 * Math.PI) * 10;
+        self.parent = param.parent;
         self.timer = 0;
         self.toRemove = false;
         const super_update = self.update;
@@ -187,7 +214,8 @@ class Bullet {
 
             for (let i in Player.list) {
                 const player = Player.list[i];
-                if (self.getDistance(player) < 32 && self.parent !== player.id) {
+
+                if (self.map === player.map && self.getDistance(player) < 32 && self.parent !== player.id) {
                     player.hp -= 1;
                     if (player.hp <= 0) {
                         const shooter = Player.list[self.parent];
@@ -208,6 +236,7 @@ class Bullet {
                 id: self.id,
                 x: self.x,
                 y: self.y,
+                map: self.map
             }
         }
         self.getUpdatePack = () => {
@@ -254,6 +283,7 @@ Bullet.getAllInitPack = () => {
 
 io.on('connection', (socket) => {
     console.log('New User connected');
+
     socket.id = Math.random();
     SOCKET_LIST[socket.id] = socket;
     Player.onConnect(socket)
