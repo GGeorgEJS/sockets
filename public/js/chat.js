@@ -2,6 +2,15 @@ const socket = io();
 const ctx = document.getElementById("ctx").getContext("2d");
 ctx.font = "30px Arial"
 
+const Img = {}
+Img.player = new Image();
+Img.player.src = '../img/player.png';
+Img.bullet = new Image();
+Img.bullet.src = '../img/bullet.png'
+Img.map = new Image();
+Img.map.src = '../img/map.png'
+
+
 class Player {
     constructor(initPack) {
         const self = {};
@@ -15,10 +24,17 @@ class Player {
 
         self.draw = () => {
             let hpWidth = 30 * self.hp / self.hpMax;
+            ctx.fillStyle = "red";
             ctx.fillRect(self.x - hpWidth / 2, self.y - 40, hpWidth, 4);
-            ctx.fillText(self.number, self.x, self.y);
 
-            ctx.fillText(self.score, self.x, self.y - 60);
+            const width = Img.player.width * 2;
+            const height = Img.player.width * 2;
+
+            ctx.drawImage(Img.player,
+                0, 0, Img.player.width, Img.player.height,
+                self.x - width / 2, self.y - height / 2, width, height)
+
+            // ctx.fillText(self.score, self.x, self.y - 60);
         }
 
         Player.list[self.id] = self;
@@ -36,7 +52,12 @@ class Bullet {
         self.x = initPack.x;
         self.y = initPack.y;
         self.draw = () => {
-            ctx.fillRect(self.x - 5, self.y - 5, 10, 10);
+            const width = Img.bullet.width / 2;
+            const height = Img.bullet.width / 2;
+
+            ctx.drawImage(Img.bullet,
+                0, 0, Img.bullet.width, Img.bullet.height,
+                self.x - width / 2, self.y - height / 2, width, height)
         }
         Bullet.list[self.id] = self;
         return self;
@@ -105,7 +126,7 @@ socket.on('remove', (data) => {
 
 setInterval(() => {
     ctx.clearRect(0, 0, 500, 500);
-
+    drawMap();
     for (let i in Player.list) {
         Player.list[i].draw()
     }
@@ -113,6 +134,10 @@ setInterval(() => {
         Bullet.list[i].draw()
     }
 }, 1000 / 25);
+
+const drawMap = () => {
+    ctx.drawImage(Img.map, 0, 0);
+}
 
 document.addEventListener("keydown", (e) => {
     if (e.keyCode === 68)
